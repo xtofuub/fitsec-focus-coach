@@ -1,0 +1,3 @@
+fitsec branding, color, logo
+time presets, save sessions/presets 
+focus level (notifications)

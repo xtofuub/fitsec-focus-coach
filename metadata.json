@@ -1,0 +1,5 @@
+{
+  "name": "Focus Coach App",
+  "description": "A Pomodoro timer with OKR goal setting and Lean reflection for deep work.",
+  "requestFramePermissions": ["notifications"]
+}
