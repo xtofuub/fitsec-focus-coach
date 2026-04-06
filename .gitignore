@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+dist/
+dist-electron/
+.env
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+electron/builder-debug.yml
+electron/dist/
+out/
+release/
