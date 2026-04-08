@@ -7,16 +7,16 @@ let tray;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1080,
-    height: 760,
+    width: 1100,
+    height: 720,
+    minWidth: 800,
+    minHeight: 560,
     frame: false,
     resizable: true,
-    minWidth: 360,
-    minHeight: 560,
     alwaysOnTop: false,
-    transparent: true,
-    backgroundColor: '#00000000',
+    backgroundColor: '#0a0e1a',
     skipTaskbar: false,
+    show: false,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -27,10 +27,15 @@ function createWindow() {
   });
 
   const url = isDev
-    ? 'http://localhost:3000'
+    ? 'http://localhost:3001'
     : `file://${path.join(__dirname, '../dist/index.html')}`;
 
   mainWindow.loadURL(url);
+
+  // Show window once ready to avoid white flash
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+  });
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -71,13 +76,13 @@ function createTray() {
     }
   ]);
 
-  tray.setToolTip('Focus Coach');
+  tray.setToolTip('Fitsec Focus Coach');
   tray.setContextMenu(contextMenu);
 }
 
 app.whenReady().then(() => {
   if (process.platform === 'win32') {
-    app.setAppUserModelId('com.focus.coach');
+    app.setAppUserModelId('com.fitsec.focus-coach');
   }
   createWindow();
   createTray();

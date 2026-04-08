@@ -1,10 +1,11 @@
-import { FocusWidget } from './components/FocusWidget';
+import { AppShell } from './components/AppShell';
+import { ThemeProvider } from './components/ThemeProvider';
 
 function App() {
   return (
-    <div className="w-full h-screen min-h-[560px] max-h-screen overflow-hidden bg-transparent" style={{ backgroundColor: 'transparent' }}>
-      <FocusWidget />
-    </div>
+    <ThemeProvider defaultTheme="system" storageKey="fc-theme">
+      <AppShell />
+    </ThemeProvider>
   );
 }
 

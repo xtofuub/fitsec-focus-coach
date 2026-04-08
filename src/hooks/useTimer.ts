@@ -49,9 +49,9 @@ export interface InAppAlert {
 }
 
 const DEFAULT_SETTINGS: TimerSettings = {
-  workDuration: 25,
-  shortBreakDuration: 5,
-  longBreakDuration: 15,
+  workDuration: 1500, // 25 min
+  shortBreakDuration: 300, // 5 min
+  longBreakDuration: 900, // 15 min
   roundsBeforeLongBreak: 4,
   autoStartBreaks: true,
   autoStartWork: false,
@@ -61,8 +61,8 @@ const DEFAULT_SETTINGS: TimerSettings = {
   focusLevel: 'DEEP',
   theme: 'FITSEC',
   layoutDensity: 'COMFORTABLE',
-  notificationSound: 'CHIME',
-  notificationVolume: 0.55,
+  notificationSound: 'SOFT',
+  notificationVolume: 0.4,
   notificationLeadSeconds: 60
 };
 
@@ -73,28 +73,41 @@ const phaseLabel: Record<TimerPhase, string> = {
   LONG_BREAK: 'Long Break'
 };
 
-const playNotificationSound = (tone: NotificationSound, volume: number, pattern: 'PHASE_END' | 'LEAD') => {
+const playNotificationSound = (tone: NotificationSound, baseVolume: number, pattern: 'PHASE_END' | 'LEAD') => {
   try {
     const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
     const now = audioCtx.currentTime;
-    const gain = audioCtx.createGain();
-    gain.connect(audioCtx.destination);
-    gain.gain.setValueAtTime(Math.max(0, Math.min(1, volume)), now);
-
-    const getTone = () => {
-      if (tone === 'BELL') return [880, 1174, 880];
-      if (tone === 'SOFT') return [440, 554, 659];
-      return [740, 988, 1174];
+    
+    // Warmer, lower pitched frequencies
+    const getNotes = () => {
+      if (tone === 'BELL') return { freqs: [659.25, 880.00], space: 0.3 }; // E5, A5 (Singing bowl style)
+      if (tone === 'SOFT') return { freqs: [329.63, 440.00, 554.37], space: 0.15 }; // E4, A4, C#5 (Gentle harp)
+      return { freqs: [440.00, 554.37], space: 0.12 }; // A4, C#5 (Subtle chime)
     };
 
-    const frequencies = pattern === 'LEAD' ? [getTone()[0], getTone()[1]] : getTone();
+    const { freqs, space } = getNotes();
+    const frequencies = pattern === 'LEAD' ? [freqs[0]] : freqs;
+    const actualVolume = Math.max(0, Math.min(1, baseVolume)) * 0.6; // Scale down overall harshness
+
     frequencies.forEach((frequency, index) => {
+      const startTime = now + index * space;
       const osc = audioCtx.createOscillator();
-      osc.type = tone === 'SOFT' ? 'sine' : 'triangle';
-      osc.frequency.setValueAtTime(frequency, now + index * 0.14);
-      osc.connect(gain);
-      osc.start(now + index * 0.14);
-      osc.stop(now + index * 0.14 + 0.1);
+      const gainNode = audioCtx.createGain();
+      
+      // Always use pure sine wave for warm, smooth sound without harsh overtones
+      osc.type = 'sine'; 
+      osc.frequency.setValueAtTime(frequency, startTime);
+      
+      // Envelope setup (Attack, Decay, Release) to remove sharp popping
+      gainNode.gain.setValueAtTime(0, startTime);
+      gainNode.gain.linearRampToValueAtTime(actualVolume, startTime + 0.05); // Soft 50ms attack
+      gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + 1.2); // Long 1.2s trailing decay
+      
+      osc.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      
+      osc.start(startTime);
+      osc.stop(startTime + 1.2);
     });
   } catch (error) {
     console.error(error);
@@ -119,7 +132,18 @@ const showNotification = (title: string, body: string) => {
 export function useTimer() {
   const [settings, setSettings] = useState<TimerSettings>(() => {
     const saved = localStorage.getItem('focus_coach_settings');
-    return saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SETTINGS;
+    if (!saved) return DEFAULT_SETTINGS;
+    
+    let parsed = JSON.parse(saved);
+    // Migration: If workDuration is very small (e.g. 25 instead of 1500), it's likely old minute-based data
+    // We check if it's less than 120 (2 mins) to assume it was old format
+    if (parsed.workDuration < 120) {
+      parsed.workDuration *= 60;
+      parsed.shortBreakDuration *= 60;
+      parsed.longBreakDuration *= 60;
+    }
+    
+    return { ...DEFAULT_SETTINGS, ...parsed };
   });
   const [history, setHistory] = useState<SessionRecord[]>(() => {
     const saved = localStorage.getItem('focus_coach_history');
@@ -127,8 +151,8 @@ export function useTimer() {
   });
   const [phase, setPhase] = useState<TimerPhase>('IDLE');
   const [round, setRound] = useState(1);
-  const [secondsRemaining, setSecondsRemaining] = useState(settings.workDuration * 60);
-  const [totalSeconds, setTotalSeconds] = useState(settings.workDuration * 60);
+  const [secondsRemaining, setSecondsRemaining] = useState(settings.workDuration);
+  const [totalSeconds, setTotalSeconds] = useState(settings.workDuration);
   const [isActive, setIsActive] = useState(false);
   const [currentSession, setCurrentSession] = useState<SessionRecord | null>(null);
   const [activeAlert, setActiveAlert] = useState<InAppAlert | null>(null);
@@ -144,6 +168,23 @@ export function useTimer() {
   useEffect(() => {
     localStorage.setItem('focus_coach_history', JSON.stringify(history));
   }, [history]);
+
+  // Real-time updates when settings are changed
+  useEffect(() => {
+    // Determine the current target duration based on phase
+    const newTotalSeconds = 
+      phase === 'SHORT_BREAK' ? settings.shortBreakDuration :
+      phase === 'LONG_BREAK' ? settings.longBreakDuration :
+      settings.workDuration;
+    
+    // If the duration has changed, adjust the remaining time by the difference
+    if (newTotalSeconds !== totalSeconds) {
+      const diff = newTotalSeconds - totalSeconds;
+      setTotalSeconds(newTotalSeconds);
+      // We only adjust secondsRemaining if it hasn't somehow already finished
+      setSecondsRemaining(prev => Math.max(0, prev + diff));
+    }
+  }, [settings.workDuration, settings.shortBreakDuration, settings.longBreakDuration, phase, totalSeconds]);
 
   const dismissAlert = useCallback(() => {
     setActiveAlert(null);
@@ -174,13 +215,12 @@ export function useTimer() {
     (nextPhase: TimerPhase, nextRound: number) => {
       setPhase(nextPhase);
       setRound(nextRound);
-      const duration =
+      const seconds =
         nextPhase === 'SHORT_BREAK'
           ? settings.shortBreakDuration
           : nextPhase === 'LONG_BREAK'
           ? settings.longBreakDuration
           : settings.workDuration;
-      const seconds = duration * 60;
       setSecondsRemaining(seconds);
       setTotalSeconds(seconds);
       leadAlertKeyRef.current = `${nextPhase}-${nextRound}`;
@@ -197,7 +237,7 @@ export function useTimer() {
         ? {
             ...currentSession,
             rounds: currentSession.rounds + 1,
-            totalFocusTime: currentSession.totalFocusTime + settings.workDuration
+            totalFocusTime: currentSession.totalFocusTime + (settings.workDuration / 60)
           }
         : null;
       setCurrentSession(updatedSession);
@@ -237,8 +277,8 @@ export function useTimer() {
     if (phase === 'LONG_BREAK') {
       setPhase('IDLE');
       setRound(1);
-      setSecondsRemaining(settings.workDuration * 60);
-      setTotalSeconds(settings.workDuration * 60);
+      setSecondsRemaining(settings.workDuration);
+      setTotalSeconds(settings.workDuration);
       return;
     }
     startPhase('WORK', round + 1);
@@ -307,14 +347,34 @@ export function useTimer() {
     setIsActive(false);
     setPhase('IDLE');
     setRound(1);
-    setSecondsRemaining(settings.workDuration * 60);
-    setTotalSeconds(settings.workDuration * 60);
+    setSecondsRemaining(settings.workDuration);
+    setTotalSeconds(settings.workDuration);
     setCurrentSession(null);
     leadAlertKeyRef.current = '';
     dismissAlert();
   };
 
   const skipPhase = () => handlePhaseEnd();
+
+  // Keyboard Shortcuts — Space (Start/Pause), R (Reset), S (Skip)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if user is typing in an Input area
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        toggleTimer();
+      } else if (e.key.toLowerCase() === 'r') {
+        resetTimer();
+      } else if (e.key.toLowerCase() === 's') {
+        skipPhase();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [toggleTimer, resetTimer, skipPhase]);
 
   const saveSession = (reflection: SessionRecord['reflection']) => {
     if (!currentSession) return;
@@ -329,8 +389,11 @@ export function useTimer() {
 
   const today = new Date().toDateString();
   const sessionsToday = history.filter((session) => new Date(session.startTime).toDateString() === today);
-  const dailySessions = sessionsToday.length;
-  const totalFocusToday = sessionsToday.reduce((sum, session) => sum + session.totalFocusTime, 0);
+  
+  // Factor in the active session so the UI "Updates" in real-time
+  const dailySessions = sessionsToday.length + (currentSession && currentSession.rounds > 0 ? 1 : 0);
+  const totalFocusToday = sessionsToday.reduce((sum, session) => sum + session.totalFocusTime, 0) + 
+                          (currentSession ? currentSession.totalFocusTime : 0);
 
   const getCoachMessage = () => {
     if (phase === 'IDLE') return 'Set your mission and launch a meaningful sprint.';
@@ -359,6 +422,7 @@ export function useTimer() {
     totalFocusToday,
     getCoachMessage,
     activeAlert,
-    dismissAlert
+    dismissAlert,
+    previewSound: () => playNotificationSound(settings.notificationSound, settings.notificationVolume, 'PHASE_END'),
   };
 }
