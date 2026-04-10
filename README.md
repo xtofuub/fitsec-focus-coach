@@ -1,6 +1,7 @@
 # Fitsec Focus Coach
 
 A Pomodoro-style focus timer built as an Electron desktop app.
+<img width="1095" height="721" alt="image" src="https://github.com/user-attachments/assets/3383b9af-5ae1-434f-bb29-edf31fdbff44" />
 
 ---
 
