@@ -1,17 +1,12 @@
 import React, { useState } from 'react';
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
-import {
-  Timer,
-  BarChart3,
-  Settings,
-  X,
-  Minus,
-} from 'lucide-react';
+import { Timer, BarChart3, Settings, X, Minus } from 'lucide-react';
 import { useTimer } from '@/hooks/useTimer';
 import { TimerView } from '@/components/views/TimerView';
 import { HistoryView } from '@/components/views/HistoryView';
 import { SettingsView } from '@/components/views/SettingsView';
 import { motion, AnimatePresence } from 'framer-motion';
+import logo from '@/assets/logo.png';
 
 type View = 'timer' | 'history' | 'settings';
 
@@ -34,31 +29,21 @@ export const AppShell: React.FC = () => {
       <div className="w-full h-screen flex flex-col overflow-hidden">
         {/* ─── Title Bar ─── */}
         <div
-          className="h-11 flex items-center justify-between px-4 border-b border-[var(--fc-surface-border)] bg-[var(--fc-bg-start)]/80 backdrop-blur-xl shrink-0 select-none z-50"
+          className="h-10 flex items-center justify-between px-4 bg-transparent shrink-0 select-none z-50"
           style={{ WebkitAppRegion: 'drag' } as any}
         >
           {/* Brand */}
-          <div className="flex items-center gap-2.5">
-            <div className="relative">
-              <img src="./icon.png" alt="Fitsec" className="w-5 h-5 object-contain" />
+          <div className="flex items-center gap-3">
+            <div className="relative flex items-center">
+              <img src={logo} alt="Fitsec" className="h-4 w-auto object-contain brightness-125 hover:brightness-150 transition-all invert dark:invert-0" />
               {timer.isActive && (
-                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[var(--fc-accent-light)] shadow-[0_0_8px_var(--fc-accent-glow)] animate-pulse" />
+                <span className="absolute -top-1 -right-2 w-1.5 h-1.5 rounded-full bg-[var(--fc-accent-light)] shadow-[0_0_8px_var(--fc-accent-glow)] animate-pulse" />
               )}
             </div>
-            <div className="flex flex-col">
-              <span className="text-[11px] font-black tracking-[0.16em] uppercase text-[var(--fc-text-secondary)]">
-                Fitsec Focus Coach
-              </span>
-              {timer.isActive && (
-                <motion.span 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-[8px] font-bold uppercase tracking-widest text-[var(--fc-accent-light)] -mt-0.5"
-                >
-                  {timer.phase === 'WORK' ? 'Focusing' : 'Resting'}
-                </motion.span>
-              )}
-            </div>
+            <div className="h-3 w-px bg-[var(--fc-surface-border)] mx-1" />
+            <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-[var(--fc-text-muted)] mt-0.5">
+              Focus Coach
+            </span>
           </div>
 
           {/* Window Controls */}
@@ -79,10 +64,10 @@ export const AppShell: React.FC = () => {
         </div>
 
         {/* ─── Body ─── */}
-        <div className="flex flex-1 min-h-0">
+        <div className="flex flex-1 min-h-0 p-3 pt-0 gap-3">
           {/* ─── Sidebar ─── */}
-          <nav className="w-[68px] flex flex-col items-center py-4 border-r border-[var(--fc-surface-border)] bg-[var(--fc-bg-start)]/60 backdrop-blur-xl shrink-0">
-            <div className="flex flex-col gap-1 flex-1">
+          <nav className="w-[64px] flex flex-col items-center py-5 border border-[var(--fc-surface-border)] bg-[var(--fc-surface)]/20 backdrop-blur-2xl rounded-2xl shrink-0 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_8px_32px_rgba(0,0,0,0.3)]">
+            <div className="flex flex-col gap-2 flex-1">
               {NAV_ITEMS.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeView === item.id;
@@ -92,10 +77,10 @@ export const AppShell: React.FC = () => {
                       render={
                         <button
                           onClick={() => setActiveView(item.id)}
-                          className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all relative ${
+                          className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all relative ${
                             isActive
-                              ? 'text-[var(--fc-accent-light)] bg-[var(--fc-accent-subtle)] shadow-[0_0_12px_var(--fc-accent-glow)]'
-                              : 'text-[var(--fc-text-muted)] hover:text-[var(--fc-text-secondary)] hover:bg-[var(--fc-surface-hover)]'
+                              ? 'text-[var(--fc-accent-light)] bg-[var(--fc-accent-subtle)] shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_0_12px_var(--fc-accent-glow)]'
+                              : 'text-[var(--fc-text-muted)] hover:text-[var(--fc-text)] hover:bg-[var(--fc-surface-hover)]'
                           }`}
                         />
                       }
@@ -120,14 +105,14 @@ export const AppShell: React.FC = () => {
           </nav>
 
           {/* ─── Content ─── */}
-          <main className="flex-1 min-h-0 flex flex-col overflow-hidden relative">
+          <main className="flex-1 min-h-0 flex flex-col overflow-hidden relative glass-panel rounded-2xl bg-[var(--fc-surface)]/10">
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeView}
-                initial={{ opacity: 0, x: 12 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -12 }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
+                initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
                 className="flex-1 flex flex-col min-h-0"
               >
                 {activeView === 'timer' && (
@@ -142,6 +127,7 @@ export const AppShell: React.FC = () => {
                     currentSession={timer.currentSession}
                     startSession={timer.startSession}
                     toggleTimer={timer.toggleTimer}
+                    endSession={timer.endSession}
                     resetTimer={timer.resetTimer}
                     skipPhase={timer.skipPhase}
                     saveSession={timer.saveSession}
@@ -157,6 +143,7 @@ export const AppShell: React.FC = () => {
                   <HistoryView
                     history={timer.history}
                     clearHistory={timer.clearHistory}
+                    deleteSession={timer.deleteSession}
                     dailySessions={timer.dailySessions}
                     totalFocusToday={timer.totalFocusToday}
                   />

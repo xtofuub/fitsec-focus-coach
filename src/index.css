@@ -8,14 +8,15 @@
 /* ───────────────── FITSEC FOCUS COACH — DESIGN SYSTEM ───────────────── */
 
 :root {
-  /* Core Palette — Light Mode */
+  /* Core Palette — Light Mode (Refined) */
   --fc-bg-start: #ffffff;
-  --fc-bg-mid: #f8fafc;
-  --fc-bg-end: #f1f5f9;
+  --fc-bg-mid: #fbfbfc;
+  --fc-bg-end: #f4f4f5;
   --fc-surface: rgba(255, 255, 255, 0.7);
   --fc-surface-hover: rgba(255, 255, 255, 0.9);
   --fc-surface-border: rgba(0, 0, 0, 0.08);
   --fc-surface-elevated: rgba(255, 255, 255, 0.95);
+  --fc-ring-track: rgba(0, 0, 0, 0.06);
 
   /* Accent */
   --fc-accent: #4f46e5;
@@ -73,61 +74,62 @@
 }
 
 .dark {
-  /* Core Palette — Dark Mode (Midnight/Indigo) */
-  --fc-bg-start: #0a0e1a;
-  --fc-bg-mid: #0f1629;
-  --fc-bg-end: #121a33;
-  --fc-surface: rgba(255, 255, 255, 0.04);
-  --fc-surface-hover: rgba(255, 255, 255, 0.07);
-  --fc-surface-border: rgba(255, 255, 255, 0.08);
-  --fc-surface-elevated: rgba(255, 255, 255, 0.06);
+  /* Core Palette — Dark Mode (Glass Obsidian) */
+  --fc-bg-start: #000000;
+  --fc-bg-mid: #050505;
+  --fc-bg-end: #0a0a0c;
+  --fc-surface: rgba(255, 255, 255, 0.02);
+  --fc-surface-hover: rgba(255, 255, 255, 0.05);
+  --fc-surface-border: rgba(255, 255, 255, 0.06);
+  --fc-surface-elevated: rgba(255, 255, 255, 0.04);
+  --fc-ring-track: rgba(255, 255, 255, 0.06);
 
-  /* Accent */
-  --fc-accent: #6366f1;
-  --fc-accent-light: #818cf8;
-  --fc-accent-glow: rgba(99, 102, 241, 0.35);
-  --fc-accent-subtle: rgba(99, 102, 241, 0.15);
+  /* Accent - Fitsec Cyan (#00FFFF) styling */
+  --fc-accent: #00e5e5;
+  --fc-accent-light: #00ffff;
+  --fc-accent-glow: rgba(0, 255, 255, 0.3);
+  --fc-accent-subtle: rgba(0, 255, 255, 0.1);
 
-  /* Success / Break */
-  --fc-success: #34d399;
-  --fc-success-glow: rgba(52, 211, 153, 0.3);
+  /* Success / Break - Neon Emerald */
+  --fc-success: #10b981;
+  --fc-success-glow: rgba(16, 185, 129, 0.25);
 
   /* Warning */
   --fc-warn: #fbbf24;
 
   /* Text */
-  --fc-text: #f1f5f9;
-  --fc-text-secondary: #94a3b8;
-  --fc-text-muted: #64748b;
+  --fc-text: #f4f4f5;
+  --fc-text-secondary: #a1a1aa;
+  --fc-text-muted: #71717a;
 
   /* shadcn overrides - Dark Mode */
-  --background: #0a0e1a;
-  --foreground: #f1f5f9;
-  --card: rgba(255, 255, 255, 0.04);
-  --card-foreground: #f1f5f9;
-  --popover: #141b2d;
-  --popover-foreground: #f1f5f9;
-  --primary: #6366f1;
-  --primary-foreground: #ffffff;
-  --secondary: rgba(255, 255, 255, 0.06);
-  --secondary-foreground: #e2e8f0;
-  --muted: rgba(255, 255, 255, 0.06);
-  --muted-foreground: #94a3b8;
-  --accent: rgba(99, 102, 241, 0.15);
-  --accent-foreground: #c7d2fe;
+  --background: #000000;
+  --foreground: #f4f4f5;
+  --card: rgba(255, 255, 255, 0.02);
+  --card-foreground: #f4f4f5;
+  --popover: #0a0a0c;
+  --popover-foreground: #f4f4f5;
+  --primary: #00ffff;
+  --primary-foreground: #000000;
+  --secondary: rgba(255, 255, 255, 0.05);
+  --secondary-foreground: #e4e4e7;
+  --muted: rgba(255, 255, 255, 0.05);
+  --muted-foreground: #a1a1aa;
+  --accent: rgba(0, 255, 255, 0.1);
+  --accent-foreground: #67e8f9;
   --destructive: #ef4444;
-  --border: rgba(255, 255, 255, 0.08);
-  --input: rgba(255, 255, 255, 0.08);
-  --ring: #6366f1;
+  --border: rgba(255, 255, 255, 0.06);
+  --input: rgba(255, 255, 255, 0.06);
+  --ring: #00ffff;
 
-  --sidebar: #0d1220;
-  --sidebar-foreground: #f1f5f9;
-  --sidebar-primary: #6366f1;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: rgba(99, 102, 241, 0.15);
-  --sidebar-accent-foreground: #c7d2fe;
+  --sidebar: #050505;
+  --sidebar-foreground: #f4f4f5;
+  --sidebar-primary: #00ffff;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: rgba(0, 255, 255, 0.1);
+  --sidebar-accent-foreground: #67e8f9;
   --sidebar-border: rgba(255, 255, 255, 0.06);
-  --sidebar-ring: #6366f1;
+  --sidebar-ring: #00ffff;
 }
 
 @theme inline {
@@ -185,8 +187,20 @@
     background: linear-gradient(145deg, var(--fc-bg-start), var(--fc-bg-mid), var(--fc-bg-end));
     color: var(--fc-text);
     @apply antialiased;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
     min-height: 100vh;
+  }
+
+  /* Noise Overlay */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    opacity: 0.02;
+    mix-blend-mode: overlay;
   }
 
   /* Clean scrollbar */
@@ -210,17 +224,18 @@
   background: var(--fc-surface);
   border: 1px solid var(--fc-surface-border);
   border-radius: var(--fc-radius);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.03), 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .glass-panel-elevated {
   background: var(--fc-surface-elevated);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--fc-radius);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(32px) saturate(1.3);
+  -webkit-backdrop-filter: blur(32px) saturate(1.3);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05), 0 12px 40px rgba(0, 0, 0, 0.4);
 }
 
 /* ───────────── ANIMATIONS ───────────── */
@@ -259,7 +274,7 @@
 /* ───────────── CIRCULAR TIMER RING ───────────── */
 .timer-ring-track {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.06);
+  stroke: var(--fc-ring-track);
   stroke-width: 6;
   stroke-linecap: round;
 }
@@ -311,6 +326,9 @@
   border-radius: var(--fc-radius-sm);
   padding: 1rem 1.25rem;
   transition: all 0.2s ease;
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.03);
 }
 
 .stat-card:hover {
@@ -325,9 +343,12 @@
   border-radius: var(--fc-radius-sm);
   padding: 1.25rem;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
   position: relative;
   overflow: hidden;
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.03);
 }
 
 .preset-card::before {
@@ -356,10 +377,24 @@
   border-radius: var(--fc-radius-sm);
   padding: 1rem 1.25rem;
   transition: all 0.2s ease;
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.03);
 }
 
 .session-item:hover {
   background: var(--fc-surface-hover);
+}
+
+.session-delete-btn {
+  opacity: 0.4;
+  transition: all 0.2s ease;
+}
+
+.session-item:hover .session-delete-btn {
+  opacity: 1;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
 }
 
 /* ───────────── SETTINGS GROUP ───────────── */

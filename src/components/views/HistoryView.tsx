@@ -18,9 +18,15 @@ import {
 import { type SessionRecord } from '@/hooks/useTimer';
 import { motion } from 'framer-motion';
 
+const formatMinutes = (minutes: number) => {
+  if (minutes > 0 && minutes < 1) return '<1';
+  return Math.round(minutes).toString();
+};
+
 interface HistoryViewProps {
   history: SessionRecord[];
   clearHistory: () => void;
+  deleteSession: (id: string) => void;
   dailySessions: number;
   totalFocusToday: number;
 }
@@ -46,6 +52,7 @@ const resultLabel = (result?: string) => {
 export const HistoryView: React.FC<HistoryViewProps> = ({
   history,
   clearHistory,
+  deleteSession,
   dailySessions,
   totalFocusToday,
 }) => {
@@ -112,7 +119,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
             <Clock className="w-3.5 h-3.5 text-[var(--fc-accent-light)]" />
             <span className="text-[10px] font-bold uppercase tracking-wider">Focus Time</span>
           </div>
-          <p className="text-2xl font-black text-[var(--fc-text)]">{totalFocusToday}<span className="text-sm font-medium text-[var(--fc-text-muted)]">m</span></p>
+          <p className="text-2xl font-black text-[var(--fc-text)]">{formatMinutes(totalFocusToday)}<span className="text-sm font-medium text-[var(--fc-text-muted)]">m</span></p>
         </motion.div>
 
         <motion.div
@@ -191,14 +198,27 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
 
                         <div className="flex items-center gap-3 shrink-0">
                           <div className="text-right">
-                            <p className="text-sm font-bold text-[var(--fc-text)]">{session.totalFocusTime}m</p>
+                            <p className="text-sm font-bold text-[var(--fc-text)]">{formatMinutes(session.totalFocusTime)}m</p>
                             <p className="text-[10px] text-[var(--fc-text-muted)]">{session.rounds} rounds</p>
                           </div>
-                          <div className="flex items-center gap-1.5">
-                            {resultIcon(session.reflection?.result)}
-                            <span className="text-[10px] text-[var(--fc-text-muted)]">
-                              {resultLabel(session.reflection?.result)}
-                            </span>
+                          <div className="flex items-center gap-1.5 ml-2 pl-3 border-l border-[var(--fc-surface-border)]/50">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                deleteSession(session.id);
+                              }}
+                              className="w-8 h-8 flex items-center justify-center rounded-lg session-delete-btn relative z-50 cursor-pointer"
+                              title="Delete Session"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                            <div className="flex items-center gap-1.5 min-w-[70px]">
+                              {resultIcon(session.reflection?.result)}
+                              <span className="text-[10px] text-[var(--fc-text-muted)]">
+                                {resultLabel(session.reflection?.result)}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>

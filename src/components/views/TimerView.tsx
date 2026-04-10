@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { TimeInput } from '@/components/ui/time-input';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,10 +17,20 @@ import {
   Clock,
   Sparkles,
   Settings,
+  Square,
+  Minus,
+  Plus,
 } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { type TimerPhase } from '@/hooks/useTimer';
 import { motion, AnimatePresence } from 'framer-motion';
+import { TimePickerModal } from '@/components/ui/TimePickerModal';
+
+
+const formatMinutes = (minutes: number) => {
+  if (minutes > 0 && minutes < 1) return '<1';
+  return Math.round(minutes).toString();
+};
 
 const formatTime = (seconds: number) => {
   const m = Math.floor(seconds / 60);
@@ -37,9 +46,9 @@ const PHASES: Record<TimerPhase, { label: string; color: string }> = {
 };
 
 const PRESETS = {
-  pomodoro: { work: 1500, short: 300, long: 900, rounds: 4, name: 'Pomodoro', icon: Target, desc: 'Classic 25/5 focus cycle' },
-  deepWork: { work: 3000, short: 600, long: 1800, rounds: 4, name: 'Deep Work', icon: Brain, desc: '50 min intense sessions' },
-  shortBurst: { work: 900, short: 180, long: 600, rounds: 6, name: 'Short Burst', icon: Zap, desc: '15 min sprint mode' },
+  pomodoro: { work: 1500, short: 300, long: 900, sequence: ['SHORT', 'SHORT', 'SHORT', 'LONG'], name: 'Pomodoro', icon: Target, desc: 'Classic 25/5 focus cycle' },
+  deepWork: { work: 3000, short: 600, long: 1800, sequence: ['SHORT', 'SHORT', 'SHORT', 'LONG'], name: 'Deep Work', icon: Brain, desc: '50 min intense sessions' },
+  shortBurst: { work: 900, short: 180, long: 600, sequence: ['SHORT', 'SHORT', 'SHORT', 'SHORT', 'SHORT', 'LONG'], name: 'Short Burst', icon: Zap, desc: '15 min sprint mode' },
 };
 
 interface TimerViewProps {
@@ -53,6 +62,7 @@ interface TimerViewProps {
   currentSession: any;
   startSession: (name: string, goal: string, type: string) => void;
   toggleTimer: () => void;
+  endSession: () => void;
   resetTimer: () => void;
   skipPhase: () => void;
   saveSession: (reflection: any) => void;
@@ -74,6 +84,7 @@ export const TimerView: React.FC<TimerViewProps> = ({
   currentSession,
   startSession,
   toggleTimer,
+  endSession,
   resetTimer,
   skipPhase,
   saveSession,
@@ -85,6 +96,9 @@ export const TimerView: React.FC<TimerViewProps> = ({
 }) => {
   const [sessionGoal, setSessionGoal] = useState('');
   const [sessionName, setSessionName] = useState('Focus Sprint');
+  
+  // Picker States
+  const [activePicker, setActivePicker] = useState<'work' | 'short' | 'long' | null>(null);
 
   const progress = totalSeconds > 0 ? (1 - secondsRemaining / totalSeconds) : 0;
   const isIdle = phase === 'IDLE';
@@ -105,9 +119,9 @@ export const TimerView: React.FC<TimerViewProps> = ({
       workDuration: p.work,
       shortBreakDuration: p.short,
       longBreakDuration: p.long,
-      roundsBeforeLongBreak: p.rounds,
+      breakSequence: p.sequence,
     });
-    startSession(sessionName || p.name, sessionGoal || `Complete ${p.name} cycle`, p.name);
+    startSession(sessionName || p.name, sessionGoal || `Complete ${p.name} cycle`, p.name, false);
   };
 
   return (
@@ -152,7 +166,7 @@ export const TimerView: React.FC<TimerViewProps> = ({
               <Sparkles className="w-3.5 h-3.5" />
               {PHASES[phase].label}
               <span className="text-[var(--fc-text-muted)]">·</span>
-              <span className="text-[var(--fc-text-muted)]">Round {round}/{settings.roundsBeforeLongBreak}</span>
+              <span className="text-[var(--fc-text-muted)]">Round {round}/{settings.breakSequence.length}</span>
             </Badge>
           </motion.div>
 
@@ -164,14 +178,14 @@ export const TimerView: React.FC<TimerViewProps> = ({
             >
               <defs>
                 <linearGradient id="ring-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#818cf8" />
-                  <stop offset="50%" stopColor="#6366f1" />
-                  <stop offset="100%" stopColor="#4f46e5" />
+                  <stop offset="0%" stopColor="#67e8f9" />
+                  <stop offset="50%" stopColor="#00ffff" />
+                  <stop offset="100%" stopColor="#0891b2" />
                 </linearGradient>
                 <linearGradient id="ring-gradient-break" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#6ee7b7" />
-                  <stop offset="50%" stopColor="#34d399" />
-                  <stop offset="100%" stopColor="#10b981" />
+                  <stop offset="0%" stopColor="#34d399" />
+                  <stop offset="50%" stopColor="#10b981" />
+                  <stop offset="100%" stopColor="#059669" />
                 </linearGradient>
               </defs>
               <circle
@@ -213,18 +227,18 @@ export const TimerView: React.FC<TimerViewProps> = ({
                     variant="outline"
                     size="icon"
                     className="w-11 h-11 rounded-full border-[var(--fc-surface-border)] bg-[var(--fc-surface)] hover:bg-[var(--fc-surface-hover)] text-[var(--fc-text-secondary)]"
-                    onClick={resetTimer}
+                    onClick={currentSession ? endSession : resetTimer}
                   />
                 }
               >
-                <RotateCcw className="w-4 h-4" />
+                {currentSession ? <Square className="w-4 h-4 fill-current text-red-400" /> : <RotateCcw className="w-4 h-4" />}
               </TooltipTrigger>
-              <TooltipContent>Reset Timer</TooltipContent>
+              <TooltipContent>{currentSession ? 'End Session' : 'Reset Timer'}</TooltipContent>
             </Tooltip>
 
             {isIdle ? (
               <Button
-                onClick={() => handleStartPreset('pomodoro')}
+                onClick={() => startSession(sessionName || 'Custom Focus', sessionGoal || 'Complete focus cycle', 'Custom')}
                 className="h-13 px-8 rounded-full bg-[var(--fc-accent)] hover:bg-[var(--fc-accent-light)] text-[var(--fc-text)] font-bold text-sm gap-2 shadow-[0_0_24px_var(--fc-accent-glow)] hover:shadow-[0_0_36px_var(--fc-accent-glow)] transition-all"
               >
                 <Play className="w-5 h-5 fill-current" />
@@ -262,9 +276,8 @@ export const TimerView: React.FC<TimerViewProps> = ({
             </Tooltip>
           </div>
 
-          {/* Round Dots */}
           <div className="flex items-center gap-1.5 mt-5">
-            {Array.from({ length: settings.roundsBeforeLongBreak }, (_, i) => (
+            {settings.breakSequence.map((_, i) => (
               <div
                 key={i}
                 className={`w-2 h-2 rounded-full transition-all ${
@@ -295,7 +308,7 @@ export const TimerView: React.FC<TimerViewProps> = ({
                 <Clock className="w-3.5 h-3.5 text-[var(--fc-accent-light)]" />
                 <span className="text-[10px] font-bold uppercase tracking-wider">Focus</span>
               </div>
-              <p className="text-2xl font-black text-[var(--fc-text)]">{totalFocusToday}<span className="text-sm font-medium text-[var(--fc-text-muted)]">m</span></p>
+              <p className="text-2xl font-black text-[var(--fc-text)]">{formatMinutes(totalFocusToday)}<span className="text-sm font-medium text-[var(--fc-text-muted)]">m</span></p>
             </div>
           </div>
 
@@ -310,67 +323,148 @@ export const TimerView: React.FC<TimerViewProps> = ({
               <Settings className="w-3.5 h-3.5" />
             </div>
             
-            {/* Quick Timing Adjustments */}
-            <div className="pt-3 space-y-5 border-t border-[var(--fc-surface-border)]/30">
-              {/* Work Segment */}
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-between px-0.5">
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[var(--fc-accent-light)]" />
-                    <span className="text-[10px] uppercase tracking-[0.1em] text-[var(--fc-text-secondary)] font-bold">Focus Block</span>
-                  </div>
-                  <div className="flex items-center gap-1 bg-[var(--fc-surface-hover)]/30 px-1.5 py-0.5 rounded-md border border-[var(--fc-surface-border)]/50">
-                    <TimeInput 
-                      value={settings.workDuration} 
-                      onChange={(val) => setSettings({ ...settings, workDuration: val })}
-                      className="!h-4 !w-11 text-[10px]"
-                    />
+            {/* Session Blueprint — Visual Timeline */}
+            <div className="pt-3 space-y-3 border-t border-[var(--fc-surface-border)]/30">
+              <div className="flex items-end justify-between px-0.5 pb-1">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] uppercase tracking-widest text-[var(--fc-text-muted)] font-bold">Cycle Blueprint</span>
+                  <div className="flex items-baseline gap-1.5">
+                    {(() => {
+                      const totalSeconds = (
+                        settings.workDuration * settings.breakSequence.length + 
+                        settings.breakSequence.filter((t: string) => t === 'SHORT').length * settings.shortBreakDuration +
+                        settings.breakSequence.filter((t: string) => t === 'LONG').length * settings.longBreakDuration
+                      );
+                      const h = Math.floor(totalSeconds / 3600);
+                      const m = Math.floor((totalSeconds % 3600) / 60);
+                      return (
+                        <>
+                          {h > 0 && (
+                            <span className="text-xl font-black text-[var(--fc-text)]">
+                              {h}<span className="text-[10px] font-bold text-[var(--fc-text-muted)] ml-0.5 uppercase tracking-tighter">h</span>
+                            </span>
+                          )}
+                          <span className="text-xl font-black text-[var(--fc-text)]">
+                            {m}<span className="text-[10px] font-bold text-[var(--fc-text-muted)] ml-0.5 uppercase tracking-tighter">m</span>
+                          </span>
+                          <span className="text-[10px] font-bold text-[var(--fc-text-muted)] ml-1 uppercase tracking-widest">Total</span>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
-                <Slider
-                  value={[settings.workDuration]}
-                  onValueChange={(val) => setSettings({ ...settings, workDuration: Array.isArray(val) ? val[0] : val as unknown as number })}
-                  min={5}
-                  max={5400}
-                  step={5}
-                />
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-[var(--fc-surface-hover)]/40 border border-[var(--fc-surface-border)]/50">
+                  <span className="text-[9px] font-mono font-bold text-[var(--fc-text-muted)] uppercase tracking-tight">Sequence Active</span>
+                </div>
               </div>
 
-              {/* Break Segments */}
-              <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between px-0.5">
-                    <span className="text-[9px] uppercase tracking-wider text-[var(--fc-text-muted)] font-bold">Short</span>
-                    <TimeInput 
-                      value={settings.shortBreakDuration} 
-                      onChange={(val) => setSettings({ ...settings, shortBreakDuration: val })} 
-                      className="!h-4 !w-10 !px-0"
-                    />
+              {/* Timeline Strip */}
+              <div className="flex gap-[2px] h-10 rounded-lg overflow-hidden">
+                {settings.breakSequence.map((breakType: 'SHORT' | 'LONG', i: number) => {
+                  const numWork = settings.breakSequence.length;
+                  const numShort = settings.breakSequence.filter((t: string) => t === 'SHORT').length;
+                  const numLong = settings.breakSequence.filter((t: string) => t === 'LONG').length;
+                  
+                  const totalCycleTime = (numWork * settings.workDuration) + (numShort * settings.shortBreakDuration) + (numLong * settings.longBreakDuration);
+                  
+                  const workFlex = settings.workDuration / totalCycleTime;
+                  const breakFlex = (breakType === 'SHORT' ? settings.shortBreakDuration : settings.longBreakDuration) / totalCycleTime;
+
+                  return (
+                    <React.Fragment key={i}>
+                      {/* Work segment */}
+                      <button
+                        onClick={() => setActivePicker('work')}
+                        style={{ flex: workFlex }}
+                        className="relative h-full bg-[var(--fc-accent)]/30 hover:bg-[var(--fc-accent)]/50 border border-[var(--fc-accent)]/20 hover:border-[var(--fc-accent-light)]/50 transition-all group cursor-pointer flex items-center justify-center overflow-hidden"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-b from-[var(--fc-accent-light)]/10 to-transparent" />
+                        <span className="text-[8px] font-bold text-[var(--fc-accent-light)] uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                          {Math.floor(settings.workDuration / 60)}m
+                        </span>
+                      </button>
+                      
+                      {/* Break segment */}
+                      <button
+                        onClick={() => {
+                          const nextSeq = [...settings.breakSequence];
+                          nextSeq[i] = breakType === 'SHORT' ? 'LONG' : 'SHORT';
+                          setSettings({ ...settings, breakSequence: nextSeq });
+                        }}
+                        style={{ flex: breakFlex }}
+                        className={`relative h-full transition-all group cursor-pointer flex items-center justify-center overflow-hidden border ${
+                          breakType === 'LONG' 
+                            ? 'bg-amber-500/20 hover:bg-amber-500/40 border-amber-500/20 hover:border-amber-400/50' 
+                            : 'bg-emerald-500/20 hover:bg-emerald-500/40 border-emerald-500/20 hover:border-emerald-400/50'
+                        }`}
+                      >
+                        <div className={`absolute inset-0 bg-gradient-to-b ${breakType === 'LONG' ? 'from-amber-400/10' : 'from-emerald-400/10'} to-transparent`} />
+                        <span className={`text-[8px] font-bold uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity z-10 ${breakType === 'LONG' ? 'text-amber-300' : 'text-emerald-300'}`}>
+                          {breakType === 'LONG' ? Math.floor(settings.longBreakDuration / 60) : Math.floor(settings.shortBreakDuration / 60)}m
+                        </span>
+                      </button>
+                    </React.Fragment>
+                  );
+                })}
+              </div>
+
+              {/* Duration Editor */}
+              <div className="grid grid-cols-3 gap-2 pt-1">
+                <button
+                  onClick={() => setActivePicker('work')}
+                  className="flex items-center gap-2.5 p-2.5 rounded-xl border border-[var(--fc-surface-border)]/50 bg-[var(--fc-surface)] hover:border-[var(--fc-accent-light)]/40 transition-all group"
+                >
+                  <div className="w-1 h-6 rounded-full bg-[var(--fc-accent)] group-hover:shadow-[0_0_8px_var(--fc-accent-glow)] transition-all shrink-0" />
+                  <div className="text-left min-w-0">
+                    <p className="text-[8px] uppercase tracking-widest text-[var(--fc-text-muted)] font-bold">Focus</p>
+                    <p className="text-xs font-black font-mono text-[var(--fc-text)]">{formatTime(settings.workDuration)}</p>
                   </div>
-                  <Slider
-                    value={[settings.shortBreakDuration]}
-                    onValueChange={(val) => setSettings({ ...settings, shortBreakDuration: Array.isArray(val) ? val[0] : val as unknown as number })}
-                    min={1}
-                    max={1200}
-                    step={1}
-                  />
-                </div>
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between px-0.5">
-                    <span className="text-[9px] uppercase tracking-wider text-[var(--fc-text-muted)] font-bold">Long</span>
-                    <TimeInput 
-                      value={settings.longBreakDuration} 
-                      onChange={(val) => setSettings({ ...settings, longBreakDuration: val })} 
-                      className="!h-4 !w-10 !px-0"
-                    />
+                </button>
+                <button
+                  onClick={() => setActivePicker('short')}
+                  className="flex items-center gap-2.5 p-2.5 rounded-xl border border-[var(--fc-surface-border)]/50 bg-[var(--fc-surface)] hover:border-emerald-500/40 transition-all group"
+                >
+                  <div className="w-1 h-6 rounded-full bg-emerald-500 group-hover:shadow-[0_0_8px_rgba(16,185,129,0.4)] transition-all shrink-0" />
+                  <div className="text-left min-w-0">
+                    <p className="text-[8px] uppercase tracking-widest text-[var(--fc-text-muted)] font-bold">Short</p>
+                    <p className="text-xs font-black font-mono text-[var(--fc-text)]">{formatTime(settings.shortBreakDuration)}</p>
                   </div>
-                  <Slider
-                    value={[settings.longBreakDuration]}
-                    onValueChange={(val) => setSettings({ ...settings, longBreakDuration: Array.isArray(val) ? val[0] : val as unknown as number })}
-                    min={5}
-                    max={3600}
-                    step={5}
-                  />
+                </button>
+                <button
+                  onClick={() => setActivePicker('long')}
+                  className="flex items-center gap-2.5 p-2.5 rounded-xl border border-[var(--fc-surface-border)]/50 bg-[var(--fc-surface)] hover:border-amber-500/40 transition-all group"
+                >
+                  <div className="w-1 h-6 rounded-full bg-amber-500 group-hover:shadow-[0_0_8px_rgba(251,191,36,0.4)] transition-all shrink-0" />
+                  <div className="text-left min-w-0">
+                    <p className="text-[8px] uppercase tracking-widest text-[var(--fc-text-muted)] font-bold">Long</p>
+                    <p className="text-xs font-black font-mono text-[var(--fc-text)]">{formatTime(settings.longBreakDuration)}</p>
+                  </div>
+                </button>
+              </div>
+
+              {/* Rounds */}
+              <div className="flex items-center justify-between px-0.5">
+                <span className="text-[9px] uppercase tracking-widest text-[var(--fc-text-muted)] font-bold">Rounds</span>
+                <div className="flex items-center gap-1 bg-[var(--fc-surface-hover)]/30 p-0.5 rounded-lg border border-[var(--fc-surface-border)]/50">
+                  <button
+                    onClick={() => {
+                      if (settings.breakSequence.length > 1) {
+                        setSettings({ ...settings, breakSequence: settings.breakSequence.slice(0, -1) });
+                      }
+                    }}
+                    className="w-5 h-5 flex items-center justify-center rounded bg-[var(--fc-surface)] hover:bg-[var(--fc-surface-hover)] text-[var(--fc-text-muted)] hover:text-[var(--fc-text)] transition-colors"
+                  >
+                    <Minus className="w-2.5 h-2.5" />
+                  </button>
+                  <span className="w-5 text-[10px] font-mono font-bold text-[var(--fc-text)] text-center">
+                    {settings.breakSequence.length}
+                  </span>
+                  <button
+                    onClick={() => setSettings({ ...settings, breakSequence: [...settings.breakSequence, 'SHORT'] })}
+                    className="w-5 h-5 flex items-center justify-center rounded bg-[var(--fc-surface)] hover:bg-[var(--fc-surface-hover)] text-[var(--fc-text-muted)] hover:text-[var(--fc-text)] transition-colors"
+                  >
+                    <Plus className="w-2.5 h-2.5" />
+                  </button>
                 </div>
               </div>
             </div>
@@ -436,12 +530,10 @@ export const TimerView: React.FC<TimerViewProps> = ({
                       <p className="text-sm font-bold text-[var(--fc-text)]">{value.name}</p>
                       <p className="text-[11px] text-[var(--fc-text-muted)]">{value.desc}</p>
                     </div>
-                  <div className="flex items-center gap-1.5 bg-[var(--fc-surface-hover)]/30 px-2 py-0.5 rounded-md border border-[var(--fc-surface-border)]/50">
-                    <TimeInput 
-                      value={value.work} 
-                      onChange={() => {}} // Presets are read-only here
-                      className="!h-4 !w-11 text-[9px] pointer-events-none opacity-60"
-                    />
+                  <div className="flex items-center px-2 py-1 rounded-md border border-[var(--fc-surface-border)]/50 bg-[var(--fc-surface-hover)]/20 ml-auto">
+                    <span className="text-[10px] font-bold text-[var(--fc-text-muted)] tracking-wider">
+                      {Math.floor(value.work / 60)}m
+                    </span>
                   </div>
                 </button>
               );
@@ -493,11 +585,41 @@ export const TimerView: React.FC<TimerViewProps> = ({
                     {label}
                   </button>
                 ))}
+
+                <button
+                  onClick={resetTimer}
+                  className="mt-2 text-xs font-semibold uppercase tracking-wider text-[var(--fc-text-muted)] hover:text-red-400 transition-colors py-2"
+                >
+                  Discard Session
+                </button>
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
+      {/* Time Pickers */}
+      <TimePickerModal
+        isOpen={activePicker === 'work'}
+        onClose={() => setActivePicker(null)}
+        title="Focus Duration"
+        initialSeconds={settings.workDuration}
+        onSave={(secs) => setSettings({ ...settings, workDuration: secs })}
+      />
+      <TimePickerModal
+        isOpen={activePicker === 'short'}
+        onClose={() => setActivePicker(null)}
+        title="Short Break"
+        initialSeconds={settings.shortBreakDuration}
+        onSave={(secs) => setSettings({ ...settings, shortBreakDuration: secs })}
+      />
+      <TimePickerModal
+        isOpen={activePicker === 'long'}
+        onClose={() => setActivePicker(null)}
+        title="Long Break"
+        initialSeconds={settings.longBreakDuration}
+        onSave={(secs) => setSettings({ ...settings, longBreakDuration: secs })}
+      />
     </div>
   );
 };
+

@@ -11,7 +11,7 @@ export interface TimerSettings {
   workDuration: number;
   shortBreakDuration: number;
   longBreakDuration: number;
-  roundsBeforeLongBreak: number;
+  breakSequence: ('SHORT' | 'LONG')[];
   autoStartBreaks: boolean;
   autoStartWork: boolean;
   notificationsEnabled: boolean;
@@ -52,7 +52,7 @@ const DEFAULT_SETTINGS: TimerSettings = {
   workDuration: 1500, // 25 min
   shortBreakDuration: 300, // 5 min
   longBreakDuration: 900, // 15 min
-  roundsBeforeLongBreak: 4,
+  breakSequence: ['SHORT', 'SHORT', 'SHORT', 'LONG'],
   autoStartBreaks: true,
   autoStartWork: false,
   notificationsEnabled: true,
@@ -135,19 +135,38 @@ export function useTimer() {
     if (!saved) return DEFAULT_SETTINGS;
     
     let parsed = JSON.parse(saved);
-    // Migration: If workDuration is very small (e.g. 25 instead of 1500), it's likely old minute-based data
-    // We check if it's less than 120 (2 mins) to assume it was old format
-    if (parsed.workDuration < 120) {
-      parsed.workDuration *= 60;
-      parsed.shortBreakDuration *= 60;
-      parsed.longBreakDuration *= 60;
-    }
     
-    return { ...DEFAULT_SETTINGS, ...parsed };
+    // Migration: Convert old roundsBeforeLongBreak to new breakSequence format
+    if (parsed.roundsBeforeLongBreak !== undefined && !parsed.breakSequence) {
+      const seq: ('SHORT' | 'LONG')[] = Array(parsed.roundsBeforeLongBreak - 1).fill('SHORT');
+      seq.push('LONG');
+      parsed.breakSequence = seq;
+    }
+
+    // Ensure we don't return the legacy key
+    const { roundsBeforeLongBreak, ...finalSettings } = parsed;
+    
+    // Sanity Check: Clamp values that might have been mangled by previous bugs
+    // Max Focus: 90m, Max Short: 60m, Max Long: 180m
+    if (finalSettings.workDuration > 5400) finalSettings.workDuration = 1500;
+    if (finalSettings.shortBreakDuration > 3600) finalSettings.shortBreakDuration = 300;
+    if (finalSettings.longBreakDuration > 10800) finalSettings.longBreakDuration = 900;
+    
+    return { ...DEFAULT_SETTINGS, ...finalSettings };
   });
   const [history, setHistory] = useState<SessionRecord[]>(() => {
     const saved = localStorage.getItem('focus_coach_history');
-    return saved ? JSON.parse(saved) : [];
+    if (!saved) return [];
+    try {
+      const parsed = JSON.parse(saved);
+      // Migration: Ensure every session has a unique ID (for legacy data support)
+      return (parsed as SessionRecord[]).map((s, idx) => ({
+        ...s,
+        id: s.id || `${s.startTime || Date.now()}-${idx}`
+      }));
+    } catch (e) {
+      return [];
+    }
   });
   const [phase, setPhase] = useState<TimerPhase>('IDLE');
   const [round, setRound] = useState(1);
@@ -233,15 +252,17 @@ export function useTimer() {
   const handlePhaseEnd = useCallback(() => {
     setIsActive(false);
     if (phase === 'WORK') {
-      const updatedSession = currentSession
-        ? {
-            ...currentSession,
-            rounds: currentSession.rounds + 1,
-            totalFocusTime: currentSession.totalFocusTime + (settings.workDuration / 60)
-          }
-        : null;
-      setCurrentSession(updatedSession);
-      if (round >= settings.roundsBeforeLongBreak) {
+      const timeEarned = secondsRemaining <= 1 ? totalSeconds : (totalSeconds - secondsRemaining);
+      const minutesEarned = timeEarned / 60;
+
+      setCurrentSession(prev => prev ? {
+        ...prev,
+        rounds: prev.rounds + 1,
+        totalFocusTime: prev.totalFocusTime + minutesEarned
+      } : null);
+
+      const breakType = settings.breakSequence[round - 1] || 'SHORT';
+      if (breakType === 'LONG') {
         emitAlert(
           {
             title: 'Long break started',
@@ -268,47 +289,29 @@ export function useTimer() {
     emitAlert(
       {
         title: 'Break ended',
-        body: 'You are back in focus mode. Let’s make the next block count.',
+        body: round === settings.breakSequence.length 
+          ? 'Cycle complete! Reflect on your progress.' 
+          : 'You are back in focus mode. Let’s make the next block count.',
         type: 'INFO'
       },
       { desktop: true, soundPattern: 'PHASE_END' }
     );
 
-    if (phase === 'LONG_BREAK') {
+    // END OF CYCLE: If this was the break for the last round, move to IDLE to show reflection
+    if (round === settings.breakSequence.length) {
       setPhase('IDLE');
-      setRound(1);
-      setSecondsRemaining(settings.workDuration);
-      setTotalSeconds(settings.workDuration);
+      setIsActive(false);
       return;
     }
+
     startPhase('WORK', round + 1);
-  }, [currentSession, emitAlert, phase, round, settings, startPhase]);
+  }, [emitAlert, phase, round, settings, startPhase, secondsRemaining, totalSeconds]);
 
   const tick = useCallback(() => {
-    setSecondsRemaining((previous) => {
-      if (previous <= 1) {
-        handlePhaseEnd();
-        return 0;
-      }
-      const next = previous - 1;
-      if (settings.notificationLeadSeconds > 0) {
-        const leadKey = `${phase}-${round}`;
-        if (next === settings.notificationLeadSeconds && leadAlertKeyRef.current === leadKey) {
-          emitAlert(
-            {
-              title: `${phaseLabel[phase]} ending soon`,
-              body: `${Math.ceil(settings.notificationLeadSeconds / 60)} min remaining. Prepare for the transition.`,
-              type: 'WARNING'
-            },
-            { desktop: settings.notificationsEnabled, soundPattern: 'LEAD' }
-          );
-          leadAlertKeyRef.current = `${leadKey}-sent`;
-        }
-      }
-      return next;
-    });
-  }, [emitAlert, handlePhaseEnd, phase, round, settings.notificationLeadSeconds, settings.notificationsEnabled]);
+    setSecondsRemaining((prev) => Math.max(0, prev - 1));
+  }, []);
 
+  // Timer Tick Interval
   useEffect(() => {
     if (isActive && secondsRemaining > 0) {
       timerRef.current = setInterval(tick, 1000);
@@ -320,13 +323,38 @@ export function useTimer() {
     };
   }, [isActive, secondsRemaining, tick]);
 
+  // Phase Auto-Completion
+  useEffect(() => {
+    if (isActive && secondsRemaining === 0) {
+      handlePhaseEnd();
+    }
+  }, [isActive, secondsRemaining, handlePhaseEnd]);
+
+  // Lead Time Alerts
+  useEffect(() => {
+    if (isActive && settings.notificationLeadSeconds > 0 && secondsRemaining === settings.notificationLeadSeconds) {
+      const leadKey = `${phase}-${round}`;
+      if (leadAlertKeyRef.current !== `${leadKey}-sent`) {
+        emitAlert(
+          {
+            title: `${phaseLabel[phase]} ending soon`,
+            body: `${Math.ceil(settings.notificationLeadSeconds / 60)} min remaining. Prepare for the transition.`,
+            type: 'WARNING'
+          },
+          { desktop: settings.notificationsEnabled, soundPattern: 'LEAD' }
+        );
+        leadAlertKeyRef.current = `${leadKey}-sent`;
+      }
+    }
+  }, [isActive, secondsRemaining, settings.notificationLeadSeconds, settings.notificationsEnabled, phase, round, emitAlert]);
+
   useEffect(() => {
     return () => {
       if (alertTimeoutRef.current) clearTimeout(alertTimeoutRef.current);
     };
   }, []);
 
-  const startSession = (name: string, goal: string, type: string) => {
+  const startSession = (name: string, goal: string, type: string, autoStart: boolean = true) => {
     const session: SessionRecord = {
       id: Date.now().toString(),
       name,
@@ -338,10 +366,28 @@ export function useTimer() {
     };
     setCurrentSession(session);
     startPhase('WORK', 1);
-    setIsActive(true);
+    setIsActive(autoStart);
   };
 
   const toggleTimer = () => setIsActive((current) => !current);
+
+  const endSession = () => {
+    setIsActive(false);
+
+    if (phase === 'WORK') {
+      const timeEarned = totalSeconds - secondsRemaining;
+      const minutesEarned = timeEarned / 60;
+      setCurrentSession(prev => prev ? {
+        ...prev,
+        rounds: prev.rounds + (timeEarned > 0 ? 1 : 0),
+        totalFocusTime: prev.totalFocusTime + minutesEarned
+      } : null);
+    }
+
+    setPhase('IDLE');
+    setSecondsRemaining(settings.workDuration);
+    setTotalSeconds(settings.workDuration);
+  };
 
   const resetTimer = () => {
     setIsActive(false);
@@ -414,10 +460,12 @@ export function useTimer() {
     currentSession,
     startSession,
     toggleTimer,
+    endSession,
     resetTimer,
     skipPhase,
     saveSession,
     clearHistory: () => setHistory([]),
+    deleteSession: (id: string) => setHistory((prev) => prev.filter((s) => String(s.id) !== String(id))),
     dailySessions,
     totalFocusToday,
     getCoachMessage,

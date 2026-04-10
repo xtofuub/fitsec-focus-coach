@@ -14,7 +14,7 @@ function createWindow() {
     frame: false,
     resizable: true,
     alwaysOnTop: false,
-    backgroundColor: '#0a0e1a',
+    backgroundColor: '#000000',
     skipTaskbar: false,
     show: false,
     webPreferences: {
