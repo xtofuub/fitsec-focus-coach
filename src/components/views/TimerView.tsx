@@ -60,7 +60,7 @@ interface TimerViewProps {
   settings: any;
   setSettings: (s: any) => void;
   currentSession: any;
-  startSession: (name: string, goal: string, type: string) => void;
+  startSession: (name: string, goal: string, type: string, autoStart?: boolean) => void;
   toggleTimer: () => void;
   endSession: () => void;
   resetTimer: () => void;
@@ -277,7 +277,7 @@ export const TimerView: React.FC<TimerViewProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5 mt-5">
-            {settings.breakSequence.map((_, i) => (
+            {settings.breakSequence.map((_: unknown, i: number) => (
               <div
                 key={i}
                 className={`w-2 h-2 rounded-full transition-all ${

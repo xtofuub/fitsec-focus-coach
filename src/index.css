@@ -9,20 +9,20 @@
 
 :root {
   /* Core Palette — Light Mode (Refined) */
-  --fc-bg-start: #ffffff;
-  --fc-bg-mid: #fbfbfc;
-  --fc-bg-end: #f4f4f5;
-  --fc-surface: rgba(255, 255, 255, 0.7);
-  --fc-surface-hover: rgba(255, 255, 255, 0.9);
-  --fc-surface-border: rgba(0, 0, 0, 0.08);
-  --fc-surface-elevated: rgba(255, 255, 255, 0.95);
-  --fc-ring-track: rgba(0, 0, 0, 0.06);
+  --fc-bg-start: #f8ffff;
+  --fc-bg-mid: #f0fdff;
+  --fc-bg-end: #e6f9fc;
+  --fc-surface: rgba(255, 255, 255, 0.78);
+  --fc-surface-hover: rgba(255, 255, 255, 0.96);
+  --fc-surface-border: rgba(2, 132, 145, 0.18);
+  --fc-surface-elevated: rgba(255, 255, 255, 0.98);
+  --fc-ring-track: rgba(2, 132, 145, 0.16);
 
-  /* Accent */
-  --fc-accent: #4f46e5;
-  --fc-accent-light: #6366f1;
-  --fc-accent-glow: rgba(79, 70, 229, 0.25);
-  --fc-accent-subtle: rgba(79, 70, 229, 0.1);
+  /* Accent - Fitsec Cyan (#00FFFF) styling */
+  --fc-accent: #00d6de;
+  --fc-accent-light: #00ffff;
+  --fc-accent-glow: rgba(0, 255, 255, 0.4);
+  --fc-accent-subtle: rgba(0, 255, 255, 0.16);
 
   /* Success / Break */
   --fc-success: #10b981;
@@ -48,29 +48,29 @@
   --card-foreground: #0f172a;
   --popover: #ffffff;
   --popover-foreground: #0f172a;
-  --primary: #4f46e5;
-  --primary-foreground: #ffffff;
-  --secondary: rgba(0, 0, 0, 0.04);
+  --primary: #00d6de;
+  --primary-foreground: #00343a;
+  --secondary: rgba(2, 132, 145, 0.08);
   --secondary-foreground: #334155;
-  --muted: rgba(0, 0, 0, 0.04);
+  --muted: rgba(2, 132, 145, 0.08);
   --muted-foreground: #64748b;
-  --accent: rgba(79, 70, 229, 0.1);
-  --accent-foreground: #4338ca;
+  --accent: rgba(0, 255, 255, 0.16);
+  --accent-foreground: #0e7490;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: rgba(0, 0, 0, 0.08);
-  --input: rgba(0, 0, 0, 0.08);
-  --ring: #4f46e5;
+  --border: rgba(2, 132, 145, 0.2);
+  --input: rgba(2, 132, 145, 0.2);
+  --ring: #00ffff;
   --radius: 0.625rem;
 
-  --sidebar: #f8fafc;
+  --sidebar: #f2feff;
   --sidebar-foreground: #0f172a;
-  --sidebar-primary: #4f46e5;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: rgba(79, 70, 229, 0.1);
-  --sidebar-accent-foreground: #4338ca;
-  --sidebar-border: rgba(0, 0, 0, 0.08);
-  --sidebar-ring: #4f46e5;
+  --sidebar-primary: #00d6de;
+  --sidebar-primary-foreground: #00343a;
+  --sidebar-accent: rgba(0, 255, 255, 0.16);
+  --sidebar-accent-foreground: #0e7490;
+  --sidebar-border: rgba(2, 132, 145, 0.2);
+  --sidebar-ring: #00ffff;
 }
 
 .dark {
@@ -316,7 +316,7 @@
 .sidebar-nav-item.active {
   color: var(--fc-accent-light);
   background: var(--fc-accent-subtle);
-  box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.2);
+  box-shadow: inset 0 0 0 1px rgba(0, 255, 255, 0.3);
 }
 
 /* ───────────── STAT CARD ───────────── */
@@ -361,7 +361,7 @@
 }
 
 .preset-card:hover {
-  border-color: rgba(99, 102, 241, 0.3);
+  border-color: rgba(0, 255, 255, 0.45);
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }

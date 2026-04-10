@@ -23,7 +23,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.cjs'),
       devTools: isDev,
     },
-    icon: path.join(__dirname, '../public/icon.png'),
+    icon: path.join(__dirname, '../public/icon.ico'),
   });
 
   const url = isDev
@@ -53,7 +53,7 @@ ipcMain.on('window-close', () => {
 
 function createTray() {
   try {
-    const icon = nativeImage.createFromPath(path.join(__dirname, '../public/icon.png'));
+    const icon = nativeImage.createFromPath(path.join(__dirname, '../public/icon.ico'));
     tray = new Tray(icon.isEmpty() ? nativeImage.createEmpty() : icon);
   } catch {
     tray = new Tray(nativeImage.createEmpty());

@@ -3,7 +3,7 @@ import { ThemeProvider } from './components/ThemeProvider';
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="system" storageKey="fc-theme">
+    <ThemeProvider defaultTheme="dark" storageKey="fc-theme">
       <AppShell />
     </ThemeProvider>
   );
